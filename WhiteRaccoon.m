@@ -784,6 +784,12 @@ static NSMutableDictionary *folders;
 
 #pragma mark - WRRequestListDir
 
+@interface WRRequestListDirectory ()
+
+@property (nonatomic, strong) NSMutableData * listData;
+
+@end
+
 @implementation WRRequestListDirectory
 @synthesize filesInfo;
 
@@ -808,6 +814,8 @@ static NSMutableDictionary *folders;
         [self.delegate requestFailed:self];
         return;
     }
+
+	self.listData = [NSMutableData data];
 
     // a little bit of C because I was not able to make NSInputStream play nice
     CFReadStreamRef readStreamRef = CFReadStreamCreateWithFTPURL(NULL, (__bridge CFURLRef)self.fullURL);
@@ -858,20 +866,26 @@ static NSMutableDictionary *folders;
                     NSUInteger  offset = 0;
                     CFIndex     parsedBytes;
 
+                    [self.listData appendBytes:self.streamInfo.buffer length:self.streamInfo.bytesConsumedThisIteration];
+
                     do {
 
                         CFDictionaryRef listingEntity = NULL;
 
-                        parsedBytes = CFFTPCreateParsedResourceListing(NULL, &self.streamInfo.buffer[offset], self.streamInfo.bytesConsumedThisIteration - offset, &listingEntity);
+                        parsedBytes = CFFTPCreateParsedResourceListing(NULL, &((const uint8_t *) self.listData.bytes)[offset], self.listData.length - offset, &listingEntity);
 
                         if (parsedBytes > 0) {
                             if (listingEntity != NULL) {
                                 self.filesInfo = [self.filesInfo arrayByAddingObject:(NSDictionary *)CFBridgingRelease(listingEntity)];
                             }
-                            offset += parsedBytes;
+                            offset += (NSUInteger)parsedBytes;
                         }
 
-                    } while (parsedBytes>0);
+                    } while (parsedBytes > 0);
+
+                    if(offset != 0) {
+	                    [self.listData replaceBytesInRange:NSMakeRange(0, offset) withBytes:NULL length:0];
+	                }
                 }
             }else{
                 InfoLog(@"Stream opened, but failed while trying to read from it.");
