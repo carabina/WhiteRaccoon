@@ -410,7 +410,7 @@ static NSMutableDictionary *folders;
                             [fileHandle writeData:[NSData dataWithBytes:self.streamInfo.buffer length:self.streamInfo.bytesConsumedThisIteration]];
                         }
                         @catch (NSException * e) {
-                            APLog(@"exception when writing to file %@", self.downloadLocation.path);
+                            NSLog(@"exception when writing to file %@", self.downloadLocation.path);
                         }
 
                         [fileHandle closeFile];
